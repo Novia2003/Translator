@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: translator
+  datasource:
+    url: jdbc:postgresql://147.45.151.147:5432/translator_db
+    username: gen_user
+    password: iL~\=1P0/!Ktnj
+    driver-class-name: org.postgresql.Driver
+    initialization-mode: always
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+
+yandex:
+  url: https://translate.api.cloud.yandex.net
+  api-key: AQVN3YJFyCNsdCifh7_v7hUVEbRZ7it9QbIbylkx
