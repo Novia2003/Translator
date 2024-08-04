@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class YandexProperties {
 
     private String url;
+
     private String apiKey;
 
     public String getUrl() {
