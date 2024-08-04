@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+    <html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Translation Form</title>
+</head>
+<body>
+<h1>Translation Form</h1>
+<form method="post" th:action="@{/translate}">
+    <label for="text">Text:</label>
+    <input type="text" id="text" name="text" required><br><br>
+
+    <label for="sourceLang">Source Language:</label>
+    <select id="sourceLang" name="sourceLang" required>
+        <option th:each="language : ${languages}" th:value="${language.getCode()}" th:text="${language.getName()}"></option>
+    </select><br><br>
+
+    <label for="targetLang">Target Language:</label>
+    <select id="targetLang" name="targetLang" required>
+        <option th:each="language : ${languages}" th:value="${language.getCode()}" th:text="${language.getName()}"></option>
+    </select><br><br>
+
+    <input type="submit" value="Translate">
+</form>
+</body>
+</html>

@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.tbank.translator.configuration.YandexProperties;
+import ru.tbank.translator.dto.Language;
 import ru.tbank.translator.exception.LanguageNotFoundException;
 import ru.tbank.translator.exception.TranslationException;
 import ru.tbank.translator.exception.TranslationServiceException;
@@ -16,13 +17,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Service
 public class TranslationService {
 
     private static final int MAX_THREADS = 10;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private RestTemplate restTemplate;
 
     @Autowired
     private TranslationRepository repository;
@@ -45,7 +48,7 @@ public class TranslationService {
                     return translateWord(word, sourceLang, targetLang);
                 } catch (TranslationException e) {
                     logger.error("TranslationException occurred: ", e);
-                    throw e; // Перебрасываем специфические исключения
+                    throw e;
                 } catch (Exception e) {
                     logger.error("Exception occurred: ", e);
                     throw new TranslationServiceException("Failed to translate word: " + word, e);
@@ -61,7 +64,9 @@ public class TranslationService {
                 translatedText.append(future.get()).append(" ");
             } catch (InterruptedException | ExecutionException e) {
                 logger.error("Exception occurred while translating text: ", e);
-                executor.shutdownNow(); // Завершаем работу пула потоков при возникновении ошибки
+
+                executor.shutdownNow();
+
                 throw new TranslationServiceException("Failed to translate text", e);
             }
         }
@@ -96,9 +101,11 @@ public class TranslationService {
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
             Map<String, Object> responseBody = response.getBody();
+
             if (responseBody.containsKey("translations")) {
                 @SuppressWarnings("unchecked")
                 Map<String, String> translation = ((List<Map<String, String>>) responseBody.get("translations")).get(0);
+
                 return translation.get("text");
             }
         }
@@ -108,6 +115,38 @@ public class TranslationService {
         }
 
         throw new TranslationServiceException("Failed to translate word: " + word);
+    }
+
+    public List<Language> getSupportedLanguages() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Api-Key " + properties.getApiKey());
+
+        String url = properties.getUrl() + "/translate/v2/languages";
+
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                entity,
+                Map.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            Map<String, Object> responseBody = response.getBody();
+
+            if (responseBody.containsKey("languages")) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, String>> languagesMap = (List<Map<String, String>>) responseBody.get("languages");
+
+                return languagesMap.stream()
+                        .map(a -> new Language(a.get("code"), a.get("name")))
+                        .collect(Collectors.toList());
+            }
+        }
+
+        throw new TranslationServiceException("Failed to get a list of languages");
     }
 }
 
