@@ -1,36 +1,28 @@
 package ru.tbank.translator.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+
 import org.springframework.web.bind.annotation.*;
 import ru.tbank.translator.service.TranslationService;
 
-@Controller
+@RestController
 @RequestMapping("/translate")
+@Tag(name = "TranslationController", description = "The functions of the translator")
 public class TranslationController {
 
     @Autowired
     private TranslationService translationService;
 
-    @GetMapping
-    public String showTranslationForm(Model model) {
-        model.addAttribute("languages", translationService.getSupportedLanguages());
-
-        return "translate";
-    }
-
     @PostMapping
+    @Operation(description = "Translating text from one language to another")
     public String translate(@RequestParam String text,
-                            @RequestParam String sourceLang,
-                            @RequestParam String targetLang,
-                            HttpServletRequest request,
-                            Model model) {
+                            @RequestParam String sourceLanguageCode,
+                            @RequestParam String targetLanguageCode,
+                            HttpServletRequest request) {
         String ipAddress = request.getRemoteAddr();
-        String translatedText = translationService.translateText(text, sourceLang, targetLang, ipAddress);
-        model.addAttribute("translatedText", translatedText);
-
-        return "result";
+        return translationService.translateText(text, sourceLanguageCode, targetLanguageCode, ipAddress);
     }
 }

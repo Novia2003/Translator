@@ -7,7 +7,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.tbank.translator.configuration.YandexProperties;
-import ru.tbank.translator.dto.Language;
 import ru.tbank.translator.exception.LanguageNotFoundException;
 import ru.tbank.translator.exception.TranslationException;
 import ru.tbank.translator.exception.TranslationServiceException;
@@ -36,6 +35,20 @@ public class TranslationService {
     private static final Logger logger = LoggerFactory.getLogger(TranslationService.class);
 
     public String translateText(String inputText, String sourceLang, String targetLang, String ipAddress) {
+        if (sourceLang == null || sourceLang.isEmpty())
+            throw new LanguageNotFoundException("Source language is not specified");
+
+        if (targetLang == null || targetLang.isEmpty())
+            throw new LanguageNotFoundException("Target language is not specified");
+
+        List<String> supportedLanguages = getSupportedLanguages();
+
+        if (!supportedLanguages.contains(sourceLang))
+            throw new LanguageNotFoundException("Source language is not supported: " + sourceLang);
+
+        if (!supportedLanguages.contains(targetLang))
+            throw new LanguageNotFoundException("Target language is not supported: " + targetLang);
+
         String[] words = inputText.split(" ");
         ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
@@ -117,7 +130,7 @@ public class TranslationService {
         throw new TranslationServiceException("Failed to translate word: " + word);
     }
 
-    public List<Language> getSupportedLanguages() {
+    public List<String> getSupportedLanguages() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Api-Key " + properties.getApiKey());
@@ -141,7 +154,7 @@ public class TranslationService {
                 List<Map<String, String>> languagesMap = (List<Map<String, String>>) responseBody.get("languages");
 
                 return languagesMap.stream()
-                        .map(a -> new Language(a.get("code"), a.get("name")))
+                        .map(a -> a.get("code"))
                         .collect(Collectors.toList());
             }
         }
