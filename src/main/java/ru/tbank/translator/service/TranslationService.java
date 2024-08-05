@@ -60,23 +60,23 @@ public class TranslationService {
 
     private void validateLanguages(String sourceLang, String targetLang) {
         if (sourceLang == null || sourceLang.isEmpty())
-            throw new LanguageNotFoundException("Source language is not specified");
+            throw new LanguageNotFoundException("Исходный язык не указан");
 
         if (targetLang == null || targetLang.isEmpty())
-            throw new LanguageNotFoundException("Target language is not specified");
+            throw new LanguageNotFoundException("Конечный язык не указан");
 
         List<String> supportedLanguages;
         try {
             supportedLanguages = getSupportedLanguagesCodes();
         } catch (TranslationServiceException e) {
-            throw new LanguageNotFoundException("Failed to get supported languages", e);
+            throw new LanguageNotFoundException("Не удалось получить доступ к поддерживаемым языкам", e);
         }
 
         if (!supportedLanguages.contains(sourceLang))
-            throw new LanguageNotFoundException("Source language is not supported: " + sourceLang);
+            throw new LanguageNotFoundException("Исходный язык не поддерживается: " + sourceLang);
 
         if (!supportedLanguages.contains(targetLang))
-            throw new LanguageNotFoundException("Target language is not supported: " + targetLang);
+            throw new LanguageNotFoundException("Конечный язык не поддерживается: " + targetLang);
     }
 
     private List<Future<String>> submitTranslationTasks(String[] words, String sourceLang, String targetLang, ExecutorService executor) {
@@ -92,7 +92,7 @@ public class TranslationService {
                     throw e;
                 } catch (Exception e) {
                     logger.error("Exception occurred: ", e);
-                    throw new TranslationServiceException("Failed to translate word: " + word, e);
+                    throw new TranslationServiceException("Не удалось перевести слово: " + word, e);
                 }
             });
             futures.add(future);
@@ -110,7 +110,7 @@ public class TranslationService {
             } catch (InterruptedException | ExecutionException e) {
                 logger.error("Exception occurred while translating text: ", e);
                 executor.shutdownNow();
-                throw new TranslationServiceException("Failed to translate text", e);
+                throw new TranslationServiceException("Не удалось перевести текст", e);
             }
         }
 
@@ -135,7 +135,7 @@ public class TranslationService {
             response = restTemplate.postForEntity(url, entity, String.class);
         } catch (Exception e) {
             logger.error("Exception occurred while translating word: ", e);
-            throw new TranslationServiceException("Failed to translate word: " + word, e);
+            throw new TranslationServiceException("Не удалось перевести слово: " + word, e);
         }
 
         logger.info("Response from translation service: {}", response);
@@ -144,9 +144,9 @@ public class TranslationService {
             return handleSuccessfulResponse(response.getBody());
 
         if (response.getStatusCode().is4xxClientError())
-            throw new LanguageNotFoundException("Language not found for word: " + word);
+            throw new LanguageNotFoundException("Не найден язык для слова: " + word);
 
-        throw new TranslationServiceException("Failed to translate word: " + word);
+        throw new TranslationServiceException("Не удалось перевести слово: " + word);
     }
 
     private HttpHeaders createHeaders() {
@@ -162,14 +162,14 @@ public class TranslationService {
             translationResponse = objectMapper.readValue(responseBody, TranslationResponse.class);
         } catch (JsonProcessingException e) {
             logger.error("Failed to parse translation response: ", e);
-            throw new TranslationServiceException("Failed to parse translation response", e);
+            throw new TranslationServiceException("Не удалось  разобрать ответ с API", e);
         }
 
         if (translationResponse != null && translationResponse.getTranslations() != null
                 && !translationResponse.getTranslations().isEmpty())
             return translationResponse.getTranslations().get(0).getText();
 
-        throw new TranslationServiceException("No translations found in the response");
+        throw new TranslationServiceException("В ответе не найдено перевода");
     }
 
     public ResponseEntity<String> getSupportedLanguages() {
@@ -185,7 +185,7 @@ public class TranslationService {
             return response;
         } catch (Exception e) {
             logger.error("Exception occurred while fetching supported languages: ", e);
-            throw new TranslationServiceException("Failed to fetch supported languages", e);
+            throw new TranslationServiceException("Не удалось получить доступ к поддерживаемым языкам", e);
         }
     }
 
@@ -201,11 +201,11 @@ public class TranslationService {
                         .collect(Collectors.toList());
             } catch (JsonProcessingException e) {
                 logger.error("Failed to parse JSON response: ", e);
-                throw new TranslationServiceException("Failed to parse JSON response", e);
+                throw new TranslationServiceException("Не удалось обработать Json-ответ", e);
             }
         }
 
-        throw new TranslationServiceException("Failed to get a list of languages");
+        throw new TranslationServiceException("Не удалось получить список кодов языков");
     }
 }
 
