@@ -1,5 +1,7 @@
 package ru.tbank.translator.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,9 +9,13 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.tbank.translator.configuration.YandexProperties;
+import ru.tbank.translator.dto.language.Language;
+import ru.tbank.translator.dto.language.LanguagesResponse;
+import ru.tbank.translator.dto.translation.TranslationResponse;
 import ru.tbank.translator.exception.LanguageNotFoundException;
 import ru.tbank.translator.exception.TranslationException;
 import ru.tbank.translator.exception.TranslationServiceException;
+import ru.tbank.translator.model.TranslationModel;
 import ru.tbank.translator.repository.TranslationRepository;
 
 import java.util.ArrayList;
@@ -32,6 +38,9 @@ public class TranslationService {
     @Autowired
     private YandexProperties properties;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     private static final Logger logger = LoggerFactory.getLogger(TranslationService.class);
 
     public String translateText(String inputText, String sourceLang, String targetLang, String ipAddress) {
@@ -41,7 +50,7 @@ public class TranslationService {
         if (targetLang == null || targetLang.isEmpty())
             throw new LanguageNotFoundException("Target language is not specified");
 
-        List<String> supportedLanguages = getSupportedLanguages();
+        List<String> supportedLanguages = getSupportedLanguagesCodes();
 
         if (!supportedLanguages.contains(sourceLang))
             throw new LanguageNotFoundException("Source language is not supported: " + sourceLang);
@@ -88,12 +97,13 @@ public class TranslationService {
 
         String result = translatedText.toString().trim();
 
-        repository.saveTranslation(ipAddress, inputText, result);
+        TranslationModel translationModel = new TranslationModel(ipAddress, inputText, result);
+        repository.saveTranslation(translationModel);
 
         return result;
     }
 
-    private String translateWord(String word, String sourceLang, String targetLang) {
+    public String translateWord(String word, String sourceLang, String targetLang) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Api-Key " + properties.getApiKey());
@@ -108,18 +118,20 @@ public class TranslationService {
 
         String url = properties.getUrl() + "/translate/v2/translate";
 
-        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, entity, Map.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
         logger.info("Response from translation service: {}", response);
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            Map<String, Object> responseBody = response.getBody();
+            TranslationResponse translationResponse = null;
+            try {
+                translationResponse = objectMapper.readValue(response.getBody(), TranslationResponse.class);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
 
-            if (responseBody.containsKey("translations")) {
-                @SuppressWarnings("unchecked")
-                Map<String, String> translation = ((List<Map<String, String>>) responseBody.get("translations")).get(0);
-
-                return translation.get("text");
+            if (!translationResponse.getTranslations().isEmpty()) {
+                return translationResponse.getTranslations().get(0).getText();
             }
         }
 
@@ -130,7 +142,7 @@ public class TranslationService {
         throw new TranslationServiceException("Failed to translate word: " + word);
     }
 
-    public List<String> getSupportedLanguages() {
+    public ResponseEntity<String> getSupportedLanguages() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Api-Key " + properties.getApiKey());
@@ -139,23 +151,20 @@ public class TranslationService {
 
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                entity,
-                Map.class
-        );
+        return restTemplate.postForEntity(url, entity, String.class);
+    }
+
+    public List<String> getSupportedLanguagesCodes() {
+        ResponseEntity<String> response = getSupportedLanguages();
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            Map<String, Object> responseBody = response.getBody();
-
-            if (responseBody.containsKey("languages")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, String>> languagesMap = (List<Map<String, String>>) responseBody.get("languages");
-
-                return languagesMap.stream()
-                        .map(a -> a.get("code"))
+            try {
+                LanguagesResponse languagesResponse = objectMapper.readValue(response.getBody(), LanguagesResponse.class);
+                return languagesResponse.getLanguages().stream()
+                        .map(Language::getCode)
                         .collect(Collectors.toList());
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException("Failed to parse JSON response", e);
             }
         }
 
