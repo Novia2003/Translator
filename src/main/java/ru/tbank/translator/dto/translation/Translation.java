@@ -4,6 +4,10 @@ public class Translation {
 
     private String text;
 
+    public Translation(String text) {
+        this.text = text;
+    }
+
     public String getText() {
         return text;
     }

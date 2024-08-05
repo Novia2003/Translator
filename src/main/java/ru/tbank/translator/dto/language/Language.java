@@ -6,6 +6,10 @@ public class Language {
 
     private String name;
 
+    public Language(String code) {
+        this.code = code;
+    }
+
     public String getCode() {
         return code;
     }
