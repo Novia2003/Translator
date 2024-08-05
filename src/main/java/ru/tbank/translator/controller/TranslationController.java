@@ -11,20 +11,20 @@ import ru.tbank.translator.service.TranslationService;
 
 @RestController
 @RequestMapping("/api/v1")
-@Tag(name = "TranslationController", description = "The functions of the translator")
+@Tag(name = "TranslationController", description = "Функции переводчика")
 public class TranslationController {
 
     @Autowired
     private TranslationService translationService;
 
     @GetMapping("/languages")
-    @Operation(description = "View the list of supported languages and their codes")
+    @Operation(description = "Просмотр списка поддерживаемых языков и их кодов")
     public ResponseEntity<String> getLanguages() {
         return translationService.getSupportedLanguages();
     }
 
     @PostMapping("/translate")
-    @Operation(description = "Translating text from one language to another")
+    @Operation(description = "Перевод текста с одного языка на другой")
     public String translate(@RequestParam String text,
                             @RequestParam String sourceLanguageCode,
                             @RequestParam String targetLanguageCode,
