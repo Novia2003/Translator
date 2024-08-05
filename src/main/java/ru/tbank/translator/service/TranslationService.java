@@ -65,7 +65,12 @@ public class TranslationService {
         if (targetLang == null || targetLang.isEmpty())
             throw new LanguageNotFoundException("Target language is not specified");
 
-        List<String> supportedLanguages = getSupportedLanguagesCodes();
+        List<String> supportedLanguages;
+        try {
+            supportedLanguages = getSupportedLanguagesCodes();
+        } catch (TranslationServiceException e) {
+            throw new LanguageNotFoundException("Failed to get supported languages", e);
+        }
 
         if (!supportedLanguages.contains(sourceLang))
             throw new LanguageNotFoundException("Source language is not supported: " + sourceLang);
@@ -113,7 +118,7 @@ public class TranslationService {
         return translatedText.toString().trim();
     }
 
-    public String translateWord(String word, String sourceLang, String targetLang) {
+    private String translateWord(String word, String sourceLang, String targetLang) {
         HttpHeaders headers = createHeaders();
 
         Map<String, Object> body = Map.of(
@@ -125,7 +130,13 @@ public class TranslationService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
         String url = properties.getUrl() + "/translate/v2/translate";
 
-        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(url, entity, String.class);
+        } catch (Exception e) {
+            logger.error("Exception occurred while translating word: ", e);
+            throw new TranslationServiceException("Failed to translate word: " + word, e);
+        }
 
         logger.info("Response from translation service: {}", response);
 
@@ -154,7 +165,8 @@ public class TranslationService {
             throw new TranslationServiceException("Failed to parse translation response", e);
         }
 
-        if (!translationResponse.getTranslations().isEmpty())
+        if (translationResponse != null && translationResponse.getTranslations() != null
+                && !translationResponse.getTranslations().isEmpty())
             return translationResponse.getTranslations().get(0).getText();
 
         throw new TranslationServiceException("No translations found in the response");
