@@ -4,6 +4,9 @@ public class Translation {
 
     private String text;
 
+    public Translation() {
+    }
+
     public Translation(String text) {
         this.text = text;
     }

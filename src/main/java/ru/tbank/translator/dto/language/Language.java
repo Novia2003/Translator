@@ -6,6 +6,9 @@ public class Language {
 
     private String name;
 
+    public Language() {
+    }
+
     public Language(String code) {
         this.code = code;
     }
