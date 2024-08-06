@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  translator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    environment:
+      DB_URL: jdbc:postgresql://postgres-container/translator_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - postgres-container
+
+  postgres-container:
+    image: postgres
+    volumes:
+      - dbdata:/var/lib/postgres
+    environment:
+      POSTGRES_DB: translator_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+
+volumes:
+  dbdata:
