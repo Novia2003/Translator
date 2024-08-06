@@ -2,9 +2,9 @@ spring:
   application:
     name: translator
   datasource:
-    url: jdbc:postgresql://147.45.151.147:5432/translator_db
-    username: gen_user
-    password: iL~\=1P0/!Ktnj
+    url: jdbc:postgresql://postgres-container:5432/translator_db
+    username: postgres
+    password: postgres
     driver-class-name: org.postgresql.Driver
     initialization-mode: always
   sql:
